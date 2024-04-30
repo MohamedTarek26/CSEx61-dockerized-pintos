@@ -262,17 +262,18 @@ lock_release (struct lock *lock)
   ASSERT (lock_held_by_current_thread (lock));
   enum intr_level old_level = intr_disable();
   //Release the lock from the list and update the priority of the thread to nearest lock priority or base priority
-  list_remove(&lock->elem);
+  
   if(!thread_mlfqs){
-  struct thread* t = thread_current();
-	int max_priority = t->original_priority;
-	int lock_priority;
-  //Get the maximum priority of the locks that the thread is holding and assign the max of that and the base priority to the thread
-  struct list_elem *max = list_max(&t->locks, lock_cmp_priority_inv, NULL);
-	lock_priority = list_entry(max, struct lock, elem)->max_priority;
-	if (lock_priority > max_priority)
-			max_priority = lock_priority;
-	t->priority = max_priority;
+    list_remove(&lock->elem);
+    struct thread* t = thread_current();
+    int max_priority = t->original_priority;
+    int lock_priority;
+    //Get the maximum priority of the locks that the thread is holding and assign the max of that and the base priority to the thread
+    struct list_elem *max = list_max(&t->locks, lock_cmp_priority_inv, NULL);
+    lock_priority = list_entry(max, struct lock, elem)->max_priority;
+    if (lock_priority > max_priority)
+        max_priority = lock_priority;
+    t->priority = max_priority;
   }
   intr_set_level(old_level);
 

@@ -71,6 +71,11 @@ static void schedule (void);
 void thread_schedule_tail (struct thread *prev);
 static tid_t allocate_tid (void);
 
+
+int load_avg = 0;
+
+const int f = 16284;
+
 /* Initializes the threading system by transforming the code
    that's currently running into a thread.  This can't work in
    general and it is possible in this case only because loader.S
@@ -132,7 +137,10 @@ thread_tick (void)
     user_ticks++;
 #endif
   else
+  {
     kernel_ticks++;
+    t->recent_cpu = add_int_to_fixed(t->recent_cpu, 1);
+  }
 
   /* Enforce preemption. */
   if (++thread_ticks >= TIME_SLICE)
@@ -342,8 +350,11 @@ thread_foreach (thread_action_func *func, void *aux)
 void
 thread_set_priority (int new_priority) 
 {
-  if (thread_mlfqs)
-	  return;
+  if (thread_mlfqs){
+    thread_current()->priority = new_priority;
+    return;
+  }
+	  
   enum intr_level old_level = intr_disable();
 
   struct thread *current_thread = thread_current();
@@ -359,6 +370,59 @@ thread_set_priority (int new_priority)
   intr_set_level(old_level);
 }
 
+/* Recalculate priority for thread T. */
+void 
+calculate_priority(struct thread *t)
+{
+  if(t == idle_thread) return;
+
+  int p = PRI_MAX - (2 * t->nice);
+  t->priority = add_int_to_fixed( -(t->recent_cpu), p);
+  if(t->priority < PRI_MIN) t->priority = PRI_MIN;
+  if(t->priority > PRI_MAX) t->priority = PRI_MAX;
+}
+
+/* Fixed-point operations. */
+
+/* Convert integer to fixed-ponit integer. */
+int convert_to_fixed(int number){
+  return number * f;
+}
+
+/* Convert fixed-ponit integer to integer with rounding. */
+int convert_to_int_rounded(int fixed){  
+  if(fixed >= 0)
+    return (fixed + f / 2) / f;
+
+  if(fixed < 0)
+    return (fixed + f / 2) / f;
+}
+
+/* Convert fixed-ponit integer to integer */
+int convert_to_int(int fixed){  
+  return fixed / f;
+}
+
+/* Add integer to fixed-ponit integer. */
+int add_int_to_fixed(int fixed, int number){
+    return fixed + convert_to_fixed(number);
+}
+
+/* Subtract integer from fixed-ponit integer. */
+int subtract_int_from_fixed(int fixed, int number){
+  return fixed - convert_to_fixed(number);
+}
+
+/* Multiply two fixed-ponit integers. */
+int multiply_fixed(int fixed_1, int fixed_2){
+  return ((int64_t)fixed_1) * convert_to_int(fixed_2);
+}
+
+/* divide two fixed-ponit integers. */
+int divide_fixed(int fixed_1, int fixed_2){
+  return convert_to_fixed((int64_t)fixed_1) * fixed_2;
+}
+
 /* Returns the current thread's priority. */
 int
 thread_get_priority (void) 
@@ -370,31 +434,77 @@ thread_get_priority (void)
 void
 thread_set_nice (int nice UNUSED) 
 {
-  /* Not yet implemented. */
+  struct thread *t = thread_current();
+  t-> nice = nice;
+  calculate_priority(t);
+  thread_yield();
 }
 
 /* Returns the current thread's nice value. */
 int
 thread_get_nice (void) 
 {
-  /* Not yet implemented. */
-  return 0;
+  return thread_current()-> nice;
+}
+
+/* Recalculate load_avg. */
+void 
+calculate_load_avg(void)
+{
+  printf("-------------\nin: %d\n", convert_to_int_rounded(100 * load_avg));
+  int ready_threads = (int) list_size(&ready_list);
+
+  if( thread_current() != idle_thread)
+    ready_threads++;
+
+  printf("ready theads: %d\n", ready_threads);
+  int temp = add_int_to_fixed((load_avg * 59), ready_threads);
+  
+  load_avg = temp / 60;
+  printf("out: %d\n", convert_to_int_rounded(100 * load_avg));
 }
 
 /* Returns 100 times the system load average. */
 int
 thread_get_load_avg (void) 
 {
-  /* Not yet implemented. */
-  return 0;
+  return convert_to_int_rounded(load_avg * 100);
+}
+
+/* Recalculate recent_cpu for T */
+void 
+calculate_recent_cpu(struct thread *t)
+{
+  if(t == idle_thread)
+    return;
+
+  int frac = 2 * load_avg;
+  frac = divide_fixed(frac,add_int_to_fixed(frac,1));
+  frac = multiply_fixed(frac,t->recent_cpu);
+  frac = add_int_to_fixed(frac,t->nice);
+  t->recent_cpu = frac;
+}
+
+void 
+reset_all_recent_cpu(void)
+{
+  struct thread *t;
+	struct list_elem *e = list_begin(&all_list);
+	for (; e != list_end(&all_list); e = list_next(e)) {
+		t = list_entry(e, struct thread, allelem);
+		if (t != idle_thread) {
+			calculate_recent_cpu(t);
+			calculate_priority(t);
+		}
+	}
+
 }
 
 /* Returns 100 times the current thread's recent_cpu value. */
 int
 thread_get_recent_cpu (void) 
 {
-  /* Not yet implemented. */
-  return 0;
+  return convert_to_int_rounded(thread_current()->recent_cpu * 100);
 }
 
 /* Idle thread.  Executes when no other thread is ready to run.
@@ -484,6 +594,11 @@ init_thread (struct thread *t, const char *name, int priority)
   t->stack = (uint8_t *) t + PGSIZE;
   t->priority = priority;
   t->magic = THREAD_MAGIC;
+
+  // initialize nice and recent_cpu
+  t->nice = 0;
+  t->recent_cpu = 0;
+
   //list_push_back (&all_list, &t->allelem);
 
   t->original_priority = priority;
