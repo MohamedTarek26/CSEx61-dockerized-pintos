@@ -254,6 +254,16 @@ list_remove (struct list_elem *elem)
   return elem->next;
 }
 
+//removes an element given its index and return it
+struct list_elem *list_remove_index (struct list* l, int index){
+  if (list_empty(l)) return NULL;
+  struct list_elem *temp = list_begin(l);
+  for (int i=0; i<index; i++)
+    *temp = *temp->next;
+  list_remove(temp);
+  return temp;
+}
+
 /* Removes the front element from LIST and returns it.
    Undefined behavior if LIST is empty before removal. */
 struct list_elem *

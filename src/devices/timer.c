@@ -7,6 +7,7 @@
 #include "threads/interrupt.h"
 #include "threads/synch.h"
 #include "threads/thread.h"
+#include "lib/kernel/int_list.h"
   
 /* See [8254] for hardware details of the 8254 timer chip. */
 
@@ -23,7 +24,8 @@ static int64_t ticks;
 /* Number of loops per timer tick.
    Initialized by timer_calibrate(). */
 static unsigned loops_per_tick;
-
+struct semaphore lock;
+struct int_list lock_list;
 static intr_handler_func timer_interrupt;
 static bool too_many_loops (unsigned loops);
 static void busy_wait (int64_t loops);
@@ -37,6 +39,7 @@ timer_init (void)
 {
   pit_configure_channel (0, 2, TIMER_FREQ);
   intr_register_ext (0x20, timer_interrupt, "8254 Timer");
+  sema_init(&lock, 0);
 }
 
 /* Calibrates loops_per_tick, used to implement brief delays. */
@@ -84,6 +87,7 @@ timer_elapsed (int64_t then)
   return timer_ticks () - then;
 }
 
+
 /* Sleeps for approximately TICKS timer ticks.  Interrupts must
    be turned on. */
 void
@@ -92,8 +96,18 @@ timer_sleep (int64_t ticks)
   int64_t start = timer_ticks ();
 
   ASSERT (intr_get_level () == INTR_ON);
-  while (timer_elapsed (start) < ticks) 
-    thread_yield ();
+  /* busy waiting implementation:
+  * while (timer_elapsed (start) < ticks) 
+  * thread_yield ();
+  */
+
+  // blocking impelemtation:
+  sema_down(&lock);
+  struct int_list_elem temp;
+  temp.start_time = start;
+  temp.sleep_time = ticks;
+  temp.index = -1*(lock.value) - 1;
+  insert_int_list_element_in_order(&lock_list, &temp);
 }
 
 /* Sleeps for approximately MS milliseconds.  Interrupts must be
@@ -171,8 +185,16 @@ static void
 timer_interrupt (struct intr_frame *args UNUSED)
 {
   ticks++;
+  struct int_list_elem *temp = search_backwards_for_finished_threads(&lock_list);
+  if (temp != NULL){
+    int finished_index = temp->index;
+    remove_from_int_list(&lock_list, temp);
+    sema_up_with_index(&lock, finished_index);
+  }
   thread_tick ();
 }
+
+
 
 /* Returns true if LOOPS iterations waits for more than one timer
    tick, otherwise false. */
