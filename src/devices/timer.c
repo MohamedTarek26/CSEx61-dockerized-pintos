@@ -51,11 +51,14 @@ timer_calibrate (void)
   /* Approximate loops_per_tick as the largest power-of-two
      still less than one timer tick. */
   loops_per_tick = 1u << 10;
+  printf("1\n");
   while (!too_many_loops (loops_per_tick << 1)) 
     {
       loops_per_tick <<= 1;
       ASSERT (loops_per_tick != 0);
     }
+
+    printf("2\n");
 
   /* Refine the next 8 bits of loops_per_tick. */
   high_bit = loops_per_tick;
@@ -183,7 +186,7 @@ too_many_loops (unsigned loops)
   int64_t start = ticks;
   while (ticks == start)
     barrier ();
-
+  printf("1.1\n");
   /* Run LOOPS loops. */
   start = ticks;
   busy_wait (loops);
