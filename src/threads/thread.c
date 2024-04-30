@@ -457,14 +457,15 @@ thread_get_nice (void)
 void
 calculte_load_avg(void)
 {    
-  // printf("in:%d\n",convert_to_int(load_avg*1000));
+  // printf("in:%d\n",convert_to_int(load_avg*100));
   int ready_threads = (int) list_size(&ready_list);
-  // ready_threads++;
+  if(thread_current() != idle_thread)
+    ready_threads++;
   ready_threads = convert_to_fixed(ready_threads);
   // printf("ready threads:%d\n",ready_threads);
   int temp = (59*load_avg);
   load_avg = (temp + ready_threads)/60;
-  // printf("out:%d\n",convert_to_int(load_avg * 1000));
+  // printf("out:%d\n",convert_to_int(load_avg * 100));
 }
 
 /* Returns 100 times the system load average. */
@@ -629,7 +630,13 @@ next_thread_to_run (void)
   if (list_empty (&ready_list))
     return idle_thread;
   else
-    return list_entry (list_pop_front (&ready_list), struct thread, elem);
+    if(thread_mlfqs){
+      struct list_elem *e = list_max(&ready_list,cmp_priority,NULL);
+      list_remove(e);
+      return list_entry (e,struct thread,elem);
+    }
+    else
+      return list_entry (list_pop_front (&ready_list), struct thread, elem);
 }
 
 /* Completes a thread switch by activating the new thread's page
