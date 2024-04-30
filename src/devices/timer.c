@@ -97,11 +97,6 @@ timer_sleep (int64_t ticks)
   // while (timer_elapsed (start) < ticks) 
   //   thread_yield ();
 
-  // if (ticks <=0){
-  //   printf("No zero or negative ticks are allowed as a parameter\n");
-  //   return;
-  // }
-
   /* Blocking implementation*/
   if (ticks > 0){
     enum intr_level old_level;
@@ -110,7 +105,6 @@ timer_sleep (int64_t ticks)
     struct thread * t = thread_current();
     t->blocked_ticks = ticks;
     thread_block ();
-    // thread_sleep (t);
     intr_set_level (old_level);
   }
 }
@@ -191,8 +185,7 @@ timer_interrupt (struct intr_frame *args UNUSED)
 {
   ticks++;
   thread_tick ();
-  // loop_on_sleeping_threads();
-  thread_foreach(thread_check_blocked, NULL);
+  thread_foreach(thread_check_if_blocked, NULL);
 }
 
 /* Returns true if LOOPS iterations waits for more than one timer

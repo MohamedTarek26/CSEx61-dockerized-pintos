@@ -95,7 +95,7 @@ thread_init (void)
   lock_init (&tid_lock);
   list_init (&ready_list);
   list_init (&all_list);
-
+  list_init (&sleeping_threads);
   /* Set up a thread structure for the running thread. */
   initial_thread = running_thread ();
   init_thread (initial_thread, "main", PRI_DEFAULT);
@@ -247,35 +247,6 @@ thread_unblock (struct thread *t)
   intr_set_level (old_level);
 }
 
-/* adding thread to sleeping list*/
-void thread_sleep(struct thread *t){
-  list_push_back(&sleeping_threads, &t->elem);
-}
-
-//  /* loop on all sleeping threads */ 
-// void loop_on_sleeping_threads(){
-//   // return if no sleeping threads
-//   if (list_empty(&sleeping_threads)) return;
-
-//   for (struct list_elem *e = list_begin (&sleeping_threads); e != list_end (&sleeping_threads); e = list_next (&sleeping_threads)){
-//     struct thread *t = list_entry (e, struct thread, allelem);
-//     t->number_of_ticks--;
-//     printf("I am Up here\n");
-//     if (t->number_of_ticks <= 0){
-//       printf("I am inside if statment\n");
-//       thread_wakeup(t);
-//       list_remove(e);
-//     }
-//   }
-//   printf("I am down here\n");
-// }
-
-/* wakes up sleeping thread */
-void thread_wakeup(struct thread *t){
-  enum intr_level old_level = intr_disable ();
-  thread_unblock(t);
-  intr_set_level (old_level);
-}
 
 /* Returns the name of the running thread. */
 const char *
@@ -614,7 +585,9 @@ allocate_tid (void)
   return tid;
 }
 
-void thread_check_blocked (struct thread *t, void *aux UNUSED){
+/* if thread is blocked with tickes (sleeping) and sleeping 
+ * time finished it unblock it */
+void thread_check_if_blocked (struct thread *t, void *aux UNUSED){
   if (t->status == THREAD_BLOCKED && t->blocked_ticks > 0){
 	  t->blocked_ticks--;
 	  if (t->blocked_ticks == 0) {
