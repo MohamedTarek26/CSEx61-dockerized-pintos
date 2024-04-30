@@ -80,9 +80,7 @@ int subtract_int_from_fixed(int fixed, int number);
 int multiply_fixed(int fixed_1, int fixed_2);
 int divid_fixed(int fixed_1, int fixed_2);
 
-int pow(int base, int power);
-
-const int f = 14;
+const int f = 16384;
 
 int load_avg = 0;
 
@@ -372,19 +370,16 @@ thread_get_priority (void)
 
 /* Fixed-point operations. */
 
-int pow(int base, int power){
-  if((power % 2) == 1)
-    return base * pow(base,power/2) * pow(base,power/2);
-  else
-    return pow(base,power/2) * pow(base,power/2);
-}
-
 int convert_to_fixed(int number){
-  return number * pow(2,f);
+  return number * f;
 }
 
 int convert_to_int(int fixed){  
-  return fixed / pow(2,f);
+  if(fixed >= 0)
+    return (fixed + f / 2) / f;
+
+  if(fixed < 0)
+    return (fixed + f / 2) / f;
 }
 
 int add_int_to_fixed(int fixed, int number){
@@ -440,11 +435,15 @@ thread_get_nice (void)
 
 void
 calculte_load_avg(void)
-{
+{    
+  // printf("in:%d\n",convert_to_int(load_avg*1000));
   int ready_threads = (int) list_size(&ready_list);
-  ready_threads = convert_to_fixed(ready_threads)/60;
-  int temp = (59*load_avg)/60;
-  load_avg = temp + ready_threads;
+  // ready_threads++;
+  ready_threads = convert_to_fixed(ready_threads);
+  // printf("ready threads:%d\n",ready_threads);
+  int temp = (59*load_avg);
+  load_avg = (temp + ready_threads)/60;
+  // printf("out:%d\n",convert_to_int(load_avg * 1000));
 }
 
 /* Returns 100 times the system load average. */
