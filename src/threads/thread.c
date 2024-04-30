@@ -224,6 +224,13 @@ thread_create (const char *name, int priority,
   /* Add to run queue. */
   thread_unblock (t);
 
+  if (!thread_mlfqs) {
+    if (thread_current() -> priority < priority){
+      thread_yield();
+    }
+  }
+
+
   return tid;
 }
 
@@ -260,7 +267,7 @@ thread_unblock (struct thread *t)
 
   old_level = intr_disable ();
   ASSERT (t->status == THREAD_BLOCKED);
-  list_push_back (&ready_list, &t->elem);
+  list_insert_ordered(&ready_list, &t->elem, (list_less_func *)&cmp_priority, NULL);
   t->status = THREAD_READY;
   intr_set_level (old_level);
 }
@@ -331,7 +338,7 @@ thread_yield (void)
 
   old_level = intr_disable ();
   if (cur != idle_thread) 
-    list_push_back (&ready_list, &cur->elem);
+    list_insert_ordered(&ready_list, &cur->elem, (list_less_func *) &cmp_priority, NULL);
   cur->status = THREAD_READY;
   schedule ();
   intr_set_level (old_level);
@@ -358,7 +365,21 @@ thread_foreach (thread_action_func *func, void *aux)
 void
 thread_set_priority (int new_priority) 
 {
-  thread_current ()->priority = new_priority;
+  if (thread_mlfqs)
+	  return;
+  enum intr_level old_level = intr_disable();
+
+  struct thread *current_thread = thread_current();
+  int old_priority = current_thread->priority;
+  int old_original_priority = current_thread->original_priority;
+  current_thread->original_priority = new_priority;
+
+  if (old_original_priority==old_priority || new_priority > old_priority) {
+	  current_thread->priority = new_priority;
+	  thread_yield();
+  }
+
+  intr_set_level(old_level);
 }
 
 /* Returns the current thread's priority. */
@@ -571,10 +592,17 @@ init_thread (struct thread *t, const char *name, int priority)
   t->niceness = 0;
   t->recent_cpu = 0;
   t->magic = THREAD_MAGIC;
+  //list_push_back (&all_list, &t->allelem);
 
-  old_level = intr_disable ();
-  list_push_back (&all_list, &t->allelem);
-  intr_set_level (old_level);
+  t->original_priority = priority;
+  list_init(&t->locks);
+  t->lock_waiting = NULL;
+
+
+  list_insert_ordered(&all_list, &t->allelem, (list_less_func *)&cmp_priority, NULL);
+  // old_level = intr_disable ();
+  // list_push_back (&all_list, &t->allelem);
+  // intr_set_level (old_level);
 }
 
 /* Allocates a SIZE-byte frame at the top of thread T's stack and
@@ -685,6 +713,38 @@ allocate_tid (void)
   lock_release (&tid_lock);
 
   return tid;
+}
+// a function of type list_less_func that can override the comparison function of list_insert_ordered and list_sort for threads
+bool cmp_priority(const struct list_elem *a, const struct list_elem *b, void *aux UNUSED) {
+	return list_entry(a, struct thread, elem)->priority > list_entry(b, struct thread, elem)->priority;
+}
+
+// a function of type list_less_func that can override the comparison function of list_insert_ordered and list_sort for locks
+bool lock_cmp_priority(const struct list_elem *a, const struct list_elem *b, void *aux UNUSED) {
+	return list_entry(a, struct lock, elem)->max_priority > list_entry(b, struct lock, elem)->max_priority;
+}
+bool lock_cmp_priority_inv(const struct list_elem *a, const struct list_elem *b, void *aux UNUSED) {
+	return list_entry(a, struct lock, elem)->max_priority < list_entry(b, struct lock, elem)->max_priority;
+}
+
+void maximise_priority(struct thread *t) {
+	enum intr_level old_level = intr_disable();
+
+	int max_priority = t->original_priority;
+	int lock_priority;
+  //Get the maximum priority of the locks that the thread is holding and assign the max of that and the base priority to the thread
+  struct list_elem *max = list_max(&t->locks, lock_cmp_priority_inv, NULL);
+	lock_priority = list_entry(max, struct lock, elem)->max_priority;
+	if (lock_priority > max_priority)
+			max_priority = lock_priority;
+  //Didn't use thread_set_priority because it would yield the thread
+	t->priority = max_priority;
+  //Change the priority of the thread in the ready list
+	if (t->status == THREAD_READY) {
+		list_remove(&t->elem);
+		list_insert_ordered(&ready_list, &t->elem, cmp_priority, NULL);
+	}
+	intr_set_level(old_level);
 }
 
 /* Offset of `stack' member within `struct thread'.
