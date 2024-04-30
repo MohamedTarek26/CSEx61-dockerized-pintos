@@ -28,6 +28,9 @@ static struct list ready_list;
    when they are first scheduled and removed when they exit. */
 static struct list all_list;
 
+/* List of all sleeping threads */
+static struct list sleeping_threads;
+
 /* Idle thread. */
 static struct thread *idle_thread;
 
@@ -190,6 +193,8 @@ thread_create (const char *name, int priority,
   /* Initialize thread. */
   init_thread (t, name, priority);
   tid = t->tid = allocate_tid ();
+  // t->number_of_ticks=0;
+  t->blocked_ticks = 0;
 
   /* Stack frame for kernel_thread(). */
   kf = alloc_frame (t, sizeof *kf);
@@ -205,7 +210,7 @@ thread_create (const char *name, int priority,
   sf = alloc_frame (t, sizeof *sf);
   sf->eip = switch_entry;
   sf->ebp = 0;
-
+  
   /* Add to run queue. */
   thread_unblock (t);
 
@@ -254,6 +259,36 @@ thread_unblock (struct thread *t)
   ASSERT (t->status == THREAD_BLOCKED);
   list_insert_ordered(&ready_list, &t->elem, (list_less_func *)&cmp_priority, NULL);
   t->status = THREAD_READY;
+  intr_set_level (old_level);
+}
+
+/* adding thread to sleeping list*/
+void thread_sleep(struct thread *t){
+  list_push_back(&sleeping_threads, &t->elem);
+}
+
+//  /* loop on all sleeping threads */ 
+// void loop_on_sleeping_threads(){
+//   // return if no sleeping threads
+//   if (list_empty(&sleeping_threads)) return;
+
+//   for (struct list_elem *e = list_begin (&sleeping_threads); e != list_end (&sleeping_threads); e = list_next (&sleeping_threads)){
+//     struct thread *t = list_entry (e, struct thread, allelem);
+//     t->number_of_ticks--;
+//     printf("I am Up here\n");
+//     if (t->number_of_ticks <= 0){
+//       printf("I am inside if statment\n");
+//       thread_wakeup(t);
+//       list_remove(e);
+//     }
+//   }
+//   printf("I am down here\n");
+// }
+
+/* wakes up sleeping thread */
+void thread_wakeup(struct thread *t){
+  enum intr_level old_level = intr_disable ();
+  thread_unblock(t);
   intr_set_level (old_level);
 }
 
@@ -721,6 +756,16 @@ allocate_tid (void)
 
   return tid;
 }
+
+void thread_check_blocked (struct thread *t, void *aux UNUSED){
+  if (t->status == THREAD_BLOCKED && t->blocked_ticks > 0){
+	  t->blocked_ticks--;
+	  if (t->blocked_ticks == 0) {
+		  thread_unblock(t);
+    }
+  }
+}
+
 // a function of type list_less_func that can override the comparison function of list_insert_ordered and list_sort for threads
 bool cmp_priority(const struct list_elem *a, const struct list_elem *b, void *aux UNUSED) {
 	return list_entry(a, struct thread, elem)->priority > list_entry(b, struct thread, elem)->priority;

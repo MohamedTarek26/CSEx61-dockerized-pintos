@@ -56,7 +56,7 @@ timer_calibrate (void)
       loops_per_tick <<= 1;
       ASSERT (loops_per_tick != 0);
     }
-
+  
   /* Refine the next 8 bits of loops_per_tick. */
   high_bit = loops_per_tick;
   for (test_bit = high_bit >> 1; test_bit != high_bit >> 10; test_bit >>= 1)
@@ -92,8 +92,27 @@ timer_sleep (int64_t ticks)
   int64_t start = timer_ticks ();
 
   ASSERT (intr_get_level () == INTR_ON);
-  while (timer_elapsed (start) < ticks) 
-    thread_yield ();
+  
+  /* Busy waiting implementation*/
+  // while (timer_elapsed (start) < ticks) 
+  //   thread_yield ();
+
+  // if (ticks <=0){
+  //   printf("No zero or negative ticks are allowed as a parameter\n");
+  //   return;
+  // }
+
+  /* Blocking implementation*/
+  if (ticks > 0){
+    enum intr_level old_level;
+    old_level = intr_disable ();
+
+    struct thread * t = thread_current();
+    t->blocked_ticks = ticks;
+    thread_block ();
+    // thread_sleep (t);
+    intr_set_level (old_level);
+  }
 }
 
 /* Sleeps for approximately MS milliseconds.  Interrupts must be
@@ -172,6 +191,8 @@ timer_interrupt (struct intr_frame *args UNUSED)
 {
   ticks++;
   thread_tick ();
+  // loop_on_sleeping_threads();
+  thread_foreach(thread_check_blocked, NULL);
 
   if(thread_mlfqs){
     struct thread *t = thread_current();
@@ -192,9 +213,9 @@ too_many_loops (unsigned loops)
 {
   /* Wait for a timer tick. */
   int64_t start = ticks;
-  while (ticks == start)
+  while (ticks == start){
     barrier ();
-
+  }
   /* Run LOOPS loops. */
   start = ticks;
   busy_wait (loops);
