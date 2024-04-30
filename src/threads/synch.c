@@ -205,16 +205,19 @@ lock_acquire (struct lock *lock)
   // Priority inheritance
   struct lock *l= lock;
   current_thread->lock_waiting = lock;
+  if(!thread_mlfqs){
 	while (l && l->holder && current_thread->priority > l->max_priority) {
 	  l->max_priority = current_thread->priority;
 		maximise_priority(l->holder);//Updates the priority of the holder thread to the max lock priority or the base priority
 	  l = l->holder->lock_waiting;
+  }
   }
   //Decrement the semaphore and add the lock to the list of locks that the thread is holding
   if(&lock->semaphore)
     sema_down (&lock->semaphore);
   enum intr_level old_level=intr_disable();
   current_thread = thread_current();
+  if(!thread_mlfqs){
 	current_thread->lock_waiting = NULL;
 	lock->max_priority = current_thread->priority;
 	list_insert_ordered(&thread_current()->locks, &lock->elem, lock_cmp_priority, NULL);
@@ -222,6 +225,7 @@ lock_acquire (struct lock *lock)
 	if (lock->max_priority > thread_current()->priority) {
 		thread_set_priority(lock->max_priority);
 	}
+}
   lock->holder = current_thread;
   intr_set_level(old_level);
 }
@@ -259,6 +263,7 @@ lock_release (struct lock *lock)
   enum intr_level old_level = intr_disable();
   //Release the lock from the list and update the priority of the thread to nearest lock priority or base priority
   list_remove(&lock->elem);
+  if(!thread_mlfqs){
   struct thread* t = thread_current();
 	int max_priority = t->original_priority;
 	int lock_priority;
@@ -268,6 +273,7 @@ lock_release (struct lock *lock)
 	if (lock_priority > max_priority)
 			max_priority = lock_priority;
 	t->priority = max_priority;
+  }
   intr_set_level(old_level);
 
   lock->holder = NULL;

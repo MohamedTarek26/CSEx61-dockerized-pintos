@@ -201,10 +201,12 @@ thread_create (const char *name, int priority,
   /* Add to run queue. */
   thread_unblock (t);
 
-    /* ++1.2 Handle Priority */
-  if (thread_current() -> priority < priority){
-	  thread_yield();
+  if (!thread_mlfqs) {
+    if (thread_current() -> priority < priority){
+      thread_yield();
+    }
   }
+
 
   return tid;
 }
@@ -340,7 +342,8 @@ thread_foreach (thread_action_func *func, void *aux)
 void
 thread_set_priority (int new_priority) 
 {
-  
+  if (thread_mlfqs)
+	  return;
   enum intr_level old_level = intr_disable();
 
   struct thread *current_thread = thread_current();
@@ -483,7 +486,6 @@ init_thread (struct thread *t, const char *name, int priority)
   t->magic = THREAD_MAGIC;
   //list_push_back (&all_list, &t->allelem);
 
-  /* ++1.2 Priority */
   t->original_priority = priority;
   list_init(&t->locks);
   t->lock_waiting = NULL;
