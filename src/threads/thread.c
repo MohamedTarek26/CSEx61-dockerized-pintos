@@ -28,6 +28,9 @@ static struct list ready_list;
    when they are first scheduled and removed when they exit. */
 static struct list all_list;
 
+/* List of all sleeping threads */
+static struct list sleeping_threads;
+
 /* Idle thread. */
 static struct thread *idle_thread;
 
@@ -182,6 +185,7 @@ thread_create (const char *name, int priority,
   /* Initialize thread. */
   init_thread (t, name, priority);
   tid = t->tid = allocate_tid ();
+  t->number_of_ticks=0;
 
   /* Stack frame for kernel_thread(). */
   kf = alloc_frame (t, sizeof *kf);
@@ -197,7 +201,7 @@ thread_create (const char *name, int priority,
   sf = alloc_frame (t, sizeof *sf);
   sf->eip = switch_entry;
   sf->ebp = 0;
-
+  
   /* Add to run queue. */
   thread_unblock (t);
 
@@ -239,6 +243,35 @@ thread_unblock (struct thread *t)
   ASSERT (t->status == THREAD_BLOCKED);
   list_push_back (&ready_list, &t->elem);
   t->status = THREAD_READY;
+  intr_set_level (old_level);
+}
+
+/* adding thread to sleeping list*/
+void thread_sleep(struct thread *t){
+  list_push_back(&sleeping_threads, &t->elem);
+}
+
+ /* loop on all sleeping threads */ 
+void loop_on_sleeping_threads(){
+  // return if no sleeping threads
+  if (list_empty(&sleeping_threads)) return;
+
+  struct list_elem *temp = list_front(&sleeping_threads);
+  while(temp != list_tail(&sleeping_threads)){
+    struct thread *t = list_entry (temp, struct thread, elem);
+    t->number_of_ticks--;
+    if (t->number_of_ticks <= 0){
+      thread_wakeup(t);
+      list_remove(temp);
+    }
+    temp = temp->next;
+  }
+}
+
+/* wakes up sleeping thread */
+void thread_wakeup(struct thread *t){
+  enum intr_level old_level = intr_disable ();
+  thread_unblock(t);
   intr_set_level (old_level);
 }
 
