@@ -185,7 +185,8 @@ thread_create (const char *name, int priority,
   /* Initialize thread. */
   init_thread (t, name, priority);
   tid = t->tid = allocate_tid ();
-  t->number_of_ticks=0;
+  // t->number_of_ticks=0;
+  t->blocked_ticks = 0;
 
   /* Stack frame for kernel_thread(). */
   kf = alloc_frame (t, sizeof *kf);
@@ -251,22 +252,23 @@ void thread_sleep(struct thread *t){
   list_push_back(&sleeping_threads, &t->elem);
 }
 
- /* loop on all sleeping threads */ 
-void loop_on_sleeping_threads(){
-  // return if no sleeping threads
-  if (list_empty(&sleeping_threads)) return;
+//  /* loop on all sleeping threads */ 
+// void loop_on_sleeping_threads(){
+//   // return if no sleeping threads
+//   if (list_empty(&sleeping_threads)) return;
 
-  struct list_elem *temp = list_front(&sleeping_threads);
-  while(temp != list_tail(&sleeping_threads)){
-    struct thread *t = list_entry (temp, struct thread, elem);
-    t->number_of_ticks--;
-    if (t->number_of_ticks <= 0){
-      thread_wakeup(t);
-      list_remove(temp);
-    }
-    temp = temp->next;
-  }
-}
+//   for (struct list_elem *e = list_begin (&sleeping_threads); e != list_end (&sleeping_threads); e = list_next (&sleeping_threads)){
+//     struct thread *t = list_entry (e, struct thread, allelem);
+//     t->number_of_ticks--;
+//     printf("I am Up here\n");
+//     if (t->number_of_ticks <= 0){
+//       printf("I am inside if statment\n");
+//       thread_wakeup(t);
+//       list_remove(e);
+//     }
+//   }
+//   printf("I am down here\n");
+// }
 
 /* wakes up sleeping thread */
 void thread_wakeup(struct thread *t){
@@ -611,6 +613,16 @@ allocate_tid (void)
 
   return tid;
 }
+
+void thread_check_blocked (struct thread *t, void *aux UNUSED){
+  if (t->status == THREAD_BLOCKED && t->blocked_ticks > 0){
+	  t->blocked_ticks--;
+	  if (t->blocked_ticks == 0) {
+		  thread_unblock(t);
+    }
+  }
+}
+
 
 /* Offset of `stack' member within `struct thread'.
    Used by switch.S, which can't figure it out on its own. */
