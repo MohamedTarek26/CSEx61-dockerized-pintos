@@ -89,8 +89,12 @@ struct thread
     char name[16];                      /* Name (for debugging purposes). */
     uint8_t *stack;                     /* Saved stack pointer. */
     int priority;                       /* Priority. */
+    int original_priority;                  /* Original priority. */
+    int nice;
+    int recent_cpu;
     struct list_elem allelem;           /* List element for all threads list. */
-
+    struct list locks;	                /* Locks that the thread is holding. */
+    struct lock *lock_waiting;          /* Lock that the thread is waiting for. */
     /* Shared between thread.c and synch.c. */
     struct list_elem elem;              /* List element. */
 #ifdef USERPROG
@@ -133,9 +137,35 @@ void thread_foreach (thread_action_func *, void *);
 int thread_get_priority (void);
 void thread_set_priority (int);
 
+// calculate priority in mlfqs
+void calculate_priority(struct thread *);
+
 int thread_get_nice (void);
 void thread_set_nice (int);
 int thread_get_recent_cpu (void);
 int thread_get_load_avg (void);
-void thread_check_if_blocked(struct thread *, void * aux UNUSED);
+void thread_check_blocked(struct thread *, void * aux UNUSED);
+//helper functions
+bool cmp_priority(const struct list_elem *, const struct list_elem *, void *);
+bool lock_cmp_priority(const struct list_elem *, const struct list_elem *, void *);
+bool lock_cmp_priority_inv(const struct list_elem *, const struct list_elem *, void *);
+void maximise_priority(struct thread *);
+
+// Fixed-point operations
+int convert_to_fixed(int number);
+int convert_to_int_rounded(int fixed);
+int convert_to_int(int fixed);
+int add_int_to_fixed(int fixed, int number);
+int subtract_int_from_fixed(int fixed, int number);
+int multiply_fixed(int fixed_1, int fixed_2);
+int divide_fixed(int fixed_1, int fixed_2);
+
+// Calculate recent_cpu & load_avg
+void increment_recent_cpu(struct thread *, int64_t);
+void calculate_recent_cpu(struct thread *);
+void reset_all_recent_cpu(void);
+
+void calculate_load_avg(void);
+
+
 #endif /* threads/thread.h */
