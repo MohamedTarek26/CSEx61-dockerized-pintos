@@ -76,7 +76,7 @@ static tid_t allocate_tid (void);
 
 
 int load_avg = 0;
-int prev_recent = 0;
+
 const int f = 16384;
 
 /* Initializes the threading system by transforming the code
@@ -255,9 +255,7 @@ thread_unblock (struct thread *t)
   list_insert_ordered(&ready_list, &t->elem, (list_less_func *)&cmp_priority, NULL);
   t->status = THREAD_READY;
 
-  // if(thread_mlfqs)
-  //   if (thread_current() != idle_thread && thread_current()->priority < t->priority )
-  //     thread_yield();
+
 
   intr_set_level (old_level);
 }
@@ -384,7 +382,7 @@ thread_foreach (thread_action_func *func, void *aux)
 struct thread *
 next_thread(void)
 {
-  struct list_elem *e = list_max(&ready_list,cmp_priority,NULL);
+  struct list_elem *e = list_max(&ready_list,(list_less_func *) &cmp_priority,NULL);
   return list_entry(e,struct thread, elem);
 }
 
@@ -459,12 +457,12 @@ int subtract_int_from_fixed(int fixed, int number){
 
 /* Multiply two fixed-ponit integers. */
 int multiply_fixed(int fixed_1, int fixed_2){
-  return ((int64_t)fixed_1) * convert_to_int_rounded(fixed_2);
+  return ((int64_t) fixed_1) * fixed_2 / f ;
 }
 
 /* divide two fixed-ponit integers. */
 int divide_fixed(int fixed_1, int fixed_2){
-  return fixed_1 / convert_to_int(fixed_2);
+  return ((int64_t) fixed_1) * f / fixed_2 ;
 }
 
 /* Returns the current thread's priority. */
@@ -483,15 +481,8 @@ thread_set_nice (int nice UNUSED)
   calculate_recent_cpu(t);
   calculate_priority(t);
 
-  // struct thread *n = next_thread_to_run();
-  // printf("1\n");
   if( t->priority < next_thread()->priority )
-  {
-    printf("t: %d\n",t->priority);
-    printf("next: %d\n",next_thread()->priority);
     thread_yield();
-    printf("done with %d\n", thread_current()->priority);
-  }
 }
 
 /* Returns the current thread's nice value. */
@@ -505,17 +496,14 @@ thread_get_nice (void)
 void 
 calculate_load_avg(void)
 {
-  // printf("-------------\nin: %d\n", convert_to_int_rounded(100 * load_avg));
   int ready_threads = (int) list_size(&ready_list);
 
   if( thread_current() != idle_thread)
     ready_threads++;
 
-  // printf("ready theads: %d\n", ready_threads);
   int temp = add_int_to_fixed((load_avg * 59), ready_threads);
   
   load_avg = temp / 60;
-  // printf("out: %d\n", convert_to_int_rounded(100 * load_avg));
 }
 
 /* Returns 100 times the system load average. */
@@ -531,18 +519,7 @@ increment_recent_cpu(struct thread *t, int64_t ticks)
   if(t == idle_thread)
     return;
 
-  // if(ticks % 52 == 0)
-  // {
-  //   printf("-----------------\n");
-  //   printf("old recent= %d\n",convert_to_int_rounded(t->recent_cpu));
-  // }
-
-  if(ticks % 4 == 0)
-    t->recent_cpu += f;
-
-  // if(ticks % 52 == 0)
-  // printf("new recent= %d\n",convert_to_int_rounded(t->recent_cpu));
-  
+    t->recent_cpu = add_int_to_fixed(t->recent_cpu, 1);  
   
 }
 
@@ -678,7 +655,7 @@ init_thread (struct thread *t, const char *name, int priority)
   list_init(&t->locks);
   t->lock_waiting = NULL;
 
-  t->blocked_ticks = 0;
+  // t->blocked_ticks = 0;
 
   list_insert_ordered(&all_list, &t->allelem, (list_less_func *)&cmp_priority, NULL);
   // old_level = intr_disable ();
@@ -711,7 +688,7 @@ next_thread_to_run (void)
     return idle_thread;
   else 
     if(thread_mlfqs){
-      struct list_elem *e = list_max(&ready_list,cmp_priority,NULL);
+      struct list_elem *e = list_min(&ready_list, (list_less_func *) &cmp_priority,NULL);
       list_remove(e);
       return list_entry(e,struct thread, elem);
     }
