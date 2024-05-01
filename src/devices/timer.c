@@ -195,7 +195,13 @@ timer_interrupt (struct intr_frame *args UNUSED)
   thread_foreach(thread_check_blocked, NULL);
 
   if(thread_mlfqs){
+    
+    // enum intr_level old_level;
+    // old_level = intr_disable ();
+
     struct thread *t = thread_current();
+
+    increment_recent_cpu(t,ticks);
 
     if(ticks % TIMER_FREQ == 0){
       calculate_load_avg();
@@ -203,6 +209,8 @@ timer_interrupt (struct intr_frame *args UNUSED)
     }
     else if(ticks % 4 == 0)
         calculate_priority(t);
+
+    // intr_set_level (old_level);
   }
 }
 

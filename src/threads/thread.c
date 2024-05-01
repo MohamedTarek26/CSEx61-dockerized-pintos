@@ -528,6 +528,27 @@ thread_get_load_avg (void)
   return convert_to_int_rounded(load_avg * 100);
 }
 
+void 
+increment_recent_cpu(struct thread *t, int64_t ticks)
+{
+  if(t == idle_thread)
+    return;
+
+  // if(ticks % 52 == 0)
+  // {
+  //   printf("-----------------\n");
+  //   printf("old recent= %d\n",convert_to_int_rounded(t->recent_cpu));
+  // }
+
+  if(ticks % 4 == 0)
+    t->recent_cpu += f;
+
+  // if(ticks % 52 == 0)
+  // printf("new recent= %d\n",convert_to_int_rounded(t->recent_cpu));
+  
+  
+}
+
 /* Recalculate recent_cpu for T */
 void 
 calculate_recent_cpu(struct thread *t)

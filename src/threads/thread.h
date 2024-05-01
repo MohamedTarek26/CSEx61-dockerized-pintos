@@ -165,6 +165,7 @@ int multiply_fixed(int fixed_1, int fixed_2);
 int divide_fixed(int fixed_1, int fixed_2);
 
 // Calculate recent_cpu & load_avg
+void increment_recent_cpu(struct thread *, int64_t);
 void calculate_recent_cpu(struct thread *);
 void reset_all_recent_cpu(void);
 
