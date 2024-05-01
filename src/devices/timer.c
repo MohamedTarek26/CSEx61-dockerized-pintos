@@ -194,7 +194,7 @@ timer_interrupt (struct intr_frame *args UNUSED)
 
     struct thread *t = thread_current();
 
-    increment_recent_cpu(t,ticks);
+    increment_recent_cpu(t);
 
     if(ticks % TIMER_FREQ == 0){
       calculate_load_avg();

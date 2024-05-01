@@ -485,7 +485,7 @@ thread_get_load_avg (void)
 }
 
 void 
-increment_recent_cpu(struct thread *t, int64_t ticks)
+increment_recent_cpu(struct thread *t)
 {
   if(t == idle_thread)
     return;
