@@ -185,7 +185,6 @@ timer_interrupt (struct intr_frame *args UNUSED)
 {
   ticks++;
   thread_tick ();
-  // loop_on_sleeping_threads();
   thread_foreach(thread_check_blocked, NULL);
 
   if(thread_mlfqs){
