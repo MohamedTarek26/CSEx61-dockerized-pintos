@@ -452,22 +452,22 @@ int convert_to_int(int fixed){
 
 /* Add integer to fixed-ponit integer. */
 int add_int_to_fixed(int fixed, int number){
-    return fixed + convert_to_fixed(number);
+    return fixed + (number*f);
 }
 
 /* Subtract integer from fixed-ponit integer. */
 int subtract_int_from_fixed(int fixed, int number){
-  return fixed - convert_to_fixed(number);
+  return fixed - (number * f);
 }
 
 /* Multiply two fixed-ponit integers. */
 int multiply_fixed(int fixed_1, int fixed_2){
-  return ((int64_t)fixed_1) * convert_to_int(fixed_2);
+  return ((int64_t)fixed_1) * convert_to_int_rounded(fixed_2);
 }
 
 /* divide two fixed-ponit integers. */
 int divide_fixed(int fixed_1, int fixed_2){
-  return convert_to_fixed((int64_t)fixed_1) * fixed_2;
+  return fixed_1 / convert_to_int(fixed_2);
 }
 
 /* Returns the current thread's priority. */
