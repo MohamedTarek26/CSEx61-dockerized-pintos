@@ -76,8 +76,8 @@ static tid_t allocate_tid (void);
 
 
 int load_avg = 0;
-
-const int f = 16284;
+int prev_recent = 0;
+const int f = 16384;
 
 /* Initializes the threading system by transforming the code
    that's currently running into a thread.  This can't work in
@@ -140,10 +140,7 @@ thread_tick (void)
     user_ticks++;
 #endif
   else
-  {
     kernel_ticks++;
-    t->recent_cpu = add_int_to_fixed(t->recent_cpu, 1);
-  }
 
   /* Enforce preemption. */
   if (++thread_ticks >= TIME_SLICE)
@@ -555,8 +552,7 @@ calculate_recent_cpu(struct thread *t)
 {
   if(t == idle_thread)
     return;
-
-  int frac = divide_fixed((2 * load_avg),add_int_to_fixed(frac,1));
+  int frac = divide_fixed((2 * load_avg),add_int_to_fixed((2 * load_avg),1));
   frac = multiply_fixed(frac,t->recent_cpu);
   frac = add_int_to_fixed(frac,t->nice);
   t->recent_cpu = frac;
@@ -682,6 +678,7 @@ init_thread (struct thread *t, const char *name, int priority)
   list_init(&t->locks);
   t->lock_waiting = NULL;
 
+  t->blocked_ticks = 0;
 
   list_insert_ordered(&all_list, &t->allelem, (list_less_func *)&cmp_priority, NULL);
   // old_level = intr_disable ();
