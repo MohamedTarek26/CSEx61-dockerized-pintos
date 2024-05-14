@@ -1,4 +1,5 @@
 #include "userprog/syscall.h"
+#include "userprog/process.h"
 #include <stdio.h>
 #include <syscall-nr.h>
 #include "threads/interrupt.h"
@@ -14,9 +15,9 @@ void syscall_init(void)
 static void
 syscall_handler(struct intr_frame *f UNUSED)
 {
-  int sys_call_type = (int)f->esp;
+  int sys_call_type = *((int *) f->esp);
   printf("system call!\n");
-
+  printf("System call type is : %d", sys_call_type);
   switch (sys_call_type)
   {
   case SYS_HALT:
@@ -26,10 +27,16 @@ syscall_handler(struct intr_frame *f UNUSED)
     /* code to handle exit system call */
     break;
   case SYS_EXEC:
-    process_execute();
+  {
+    // get filename for process_execute
+    char *process_name = (char *)(f->esp + 1);
+    printf("File to execute is : %s", process_name);
+    tid_t thread_id = process_execute(process_name);
+    
     break;
+  }
   case SYS_WAIT:
-    /* code to handle wait system call */
+    // process_wait();
     break;
   case SYS_CREATE:
     /* code to handle create system call */
