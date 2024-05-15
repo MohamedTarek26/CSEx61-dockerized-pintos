@@ -8,7 +8,8 @@
 #include <string.h>
 #include "../filesys/filesys.h"
 #include "../filesys/file.h"
-#include <block.h>
+#include "../devices/block.h"
+#include "threads/vaddr.h"
 static void syscall_handler (struct intr_frame *);
 
 /* lock for files synch*/
