@@ -36,7 +36,7 @@ syscall_handler(struct intr_frame *f UNUSED)
     break;
   }
   case SYS_WAIT:
-    // process_wait();
+    process_wait();
     break;
   case SYS_CREATE:
     /* code to handle create system call */
