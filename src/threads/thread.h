@@ -90,6 +90,20 @@ struct thread
     int priority;                       /* Priority. */
     struct list_elem allelem;           /* List element for all threads list. */
 
+   // struct list open_file;
+   bool is_perant;
+   struct list child_process;
+
+   struct thread* parent_thread;
+   bool child_creation_succsess;
+
+   int child_status;
+   child_thread* wait_on;
+
+   struct semaphore wait_child;
+   struct semaphore parent_child;
+
+
     /* Shared between thread.c and synch.c. */
     struct list_elem elem;              /* List element. */
 
@@ -101,6 +115,14 @@ struct thread
     /* Owned by thread.c. */
     unsigned magic;                     /* Detects stack overflow. */
   };
+
+
+struct child_thread
+   {
+      tid_t tid;
+      struct thread* tr;
+      struct list_elem child_elem; 
+   }
 
 /* If false (default), use round-robin scheduler.
    If true, use multi-level feedback queue scheduler.
@@ -137,5 +159,8 @@ int thread_get_nice (void);
 void thread_set_nice (int);
 int thread_get_recent_cpu (void);
 int thread_get_load_avg (void);
+
+struct child_thread* has_child(struct thread*, tid_t );
+// bool remove_child(struct thread* ,tid_t );
 
 #endif /* threads/thread.h */

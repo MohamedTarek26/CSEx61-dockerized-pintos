@@ -17,6 +17,8 @@
 #include "threads/palloc.h"
 #include "threads/thread.h"
 #include "threads/vaddr.h"
+#include "threads/synch.h"
+
 
 static thread_func start_process NO_RETURN;
 static bool load (const char *cmdline, void (**eip) (void), void **esp);
@@ -39,7 +41,9 @@ process_execute (const char *file_name)
   strlcpy (fn_copy, file_name, PGSIZE);
 
   /* Create a new thread to execute FILE_NAME. */
+  thread_current()-> is_perant = true;
   tid = thread_create (file_name, PRI_DEFAULT, start_process, fn_copy);
+
   if (tid == TID_ERROR)
     palloc_free_page (fn_copy); 
   return tid;
@@ -88,10 +92,23 @@ start_process (void *file_name_)
 int
 process_wait (tid_t child_tid UNUSED) 
 {
-  while (true)
+  struct thread* cur =  thread_current();
+
+  struct child_thread * ct = has_child(cur,child_tid) ;
+  if (ct != NULL)
   {
-    thread_yield();
+    cur-> wait_on = ct;
+    list_remove(&ct->child_elem);
+
+    sema_up(cur->parent_child);
+    sema_down(cur->wait_child);
+    
+    while (true)
+    {
+      thread_yield();
+    }
   }
+
   
   return -1;
 }
