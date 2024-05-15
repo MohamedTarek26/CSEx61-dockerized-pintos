@@ -50,7 +50,10 @@ syscall_handler (struct intr_frame *f)
   }
 
   else if (*(int*)f->eip == SYS_EXEC){
-    // TO DO
+    // get filename for process_execute
+    char *process_name = (char *)(f->esp + 1);
+    printf("File to execute is : %s", process_name);
+    tid_t thread_id = process_execute(process_name);
   }
   else if (*(int*)f->eip == SYS_WAIT){
     // TO DO
