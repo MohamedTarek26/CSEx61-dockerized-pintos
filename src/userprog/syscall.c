@@ -1,4 +1,5 @@
 #include "userprog/syscall.h"
+#include "userprog/process.h"
 #include <stdio.h>
 #include <syscall-nr.h>
 #include "threads/interrupt.h"
@@ -13,8 +14,7 @@ static void syscall_handler (struct intr_frame *);
 /* lock for files synch*/
 struct semaphore file_lock;
 
-void
-syscall_init (void) 
+void syscall_init(void)
 {
   sema_init(&file_lock, 1);
   intr_register_int (0x30, 3, INTR_ON, syscall_handler, "syscall");
