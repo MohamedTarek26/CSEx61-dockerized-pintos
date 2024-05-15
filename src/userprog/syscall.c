@@ -34,19 +34,7 @@ syscall_handler (struct intr_frame *f)
     check_void_ptr(f->esp + 4);
 
     int status = *((int*)f->esp + 1);
-    struct thread* parent = thread_current()->parent_thread;
-    printf("%s: exit(%d)\n", thread_current()->name, status);
-    if(parent) parent->child_status = status;
-    
-    // closing all opened files
-    while (!list_empty(&thread_current()->open_file_list)){
-      struct open_file *my_file = list_entry(list_pop_back(&thread_current()->open_file_list), struct open_file, elem);
-      sema_down(&file_lock);
-      file_close(my_file->ptr);
-      sema_up(&file_lock);
-      list_remove(&my_file->elem);
-      palloc_free_page(my_file);
-    }
+    sys_exit(status);
   }
 
   else if (*(int*)f->eip == SYS_EXEC){
@@ -291,4 +279,21 @@ struct open_file* get_file(int fd){
       }
     }
     return NULL;
+}
+
+// exiting process
+void sys_exit (int status){
+    struct thread* parent = thread_current()->parent_thread;
+    printf("%s: exit(%d)\n", thread_current()->name, status);
+    if(parent) parent->child_status = status;
+    
+    // closing all opened files
+    while (!list_empty(&thread_current()->open_file_list)){
+      struct open_file *my_file = list_entry(list_pop_back(&thread_current()->open_file_list), struct open_file, elem);
+      sema_down(&file_lock);
+      file_close(my_file->ptr);
+      sema_up(&file_lock);
+      list_remove(&my_file->elem);
+      palloc_free_page(my_file);
+    }
 }
