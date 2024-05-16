@@ -94,7 +94,6 @@ start_process(void *args_)
   success = load(arg, &if_.eip, &if_.esp);
 
   /* If load failed, quit. */
-<
   palloc_free_page (file_name);
   if (!success) 
   {
