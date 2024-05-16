@@ -450,20 +450,7 @@ void add_string(void **esp, const char *s)
   size_t len = strlen(s) + 1;
   *esp -= (len * sizeof(char));
   memcpy(*esp, s, len);
-}
-void push_str(void **esp, const char *s)
-{
-  size_t len = strlen(s) + 1;
-  *esp -= (len * sizeof(char));
-  memcpy(*esp, s, len);
-  printf("Pushing string :%s to %p\n", s, *esp);
-}
-
-void add_pointer(void **esp, void *pointer)
-{
-  *esp -= sizeof(void *);
-  *((void **)*esp) = pointer;
-  printf("Pushing pointer :%p to %p\n", pointer, (void **)*esp);
+  printf("Pushed string :%s to %p\n", *esp, *esp);
 }
 void add_char_pointer_pointer(void **esp, char **pointer)
 {
@@ -492,8 +479,7 @@ setup_stack(void **esp, const struct arguments *arg)
       char *addresses[arg->c];
       for (int i = arg->c - 1; i >= 0; i--)
       {
-        // add_string(esp, arg->v[i]);
-        push_str(esp, arg->v[i]);
+        add_string(esp, arg->v[i]);
 
         addresses[i] = *esp;
       }
@@ -519,9 +505,10 @@ setup_stack(void **esp, const struct arguments *arg)
       // push addresses
       for (int i = arg->c - 1; i >= 0; i--)
       {
-        // *esp -= sizeof(char *);
-        // *(char *)*esp = addresses[i];
-        add_pointer(esp, addresses[i]);
+        *esp -= sizeof(char *);
+        *(char **)*esp = addresses[i];
+          // printf("Pushed pointer :%p to %p\n", (char *)*esp, (char *)*esp);
+
       }
       // printf("Push addresses\n");
       // char* argv_add = *esp;
@@ -531,16 +518,19 @@ setup_stack(void **esp, const struct arguments *arg)
       // push argc
       *esp -= sizeof(int);
       *((int *)*esp) = arg->c;
-      printf("saving arg c %d to %p\n", arg->c, (int *)*esp);
+      printf("saving arg c %d to %p\n", *((int *)*esp), (int *)*esp);
       // hex_dump(*esp, buffer, bytes_read, true);
       // push null pointer
       *esp -= sizeof(char *);
       *(char *)*esp = 0;
       printf("Push null pointer to %p\n", (char *)*esp);
 
-      char buffer[1024];
-      int bytes_read = 100;
-      hex_dump(0xbfffffc0, buffer, bytes_read, true);
+      // char buffer[1024];
+      // int bytes_read = 100;
+      hex_dump((uintptr_t)*esp, *esp, PHYS_BASE - *esp, true);
+      // hex_dump(0xbfffffc0, buffer, bytes_read, true);
+      // hex_dump(PHYS_BASE-12, buffer, bytes_read, true);
+
     }
     else
       palloc_free_page(kpage);
