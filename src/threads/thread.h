@@ -106,10 +106,14 @@ struct thread
 
     /* Shared between thread.c and synch.c. */
     struct list_elem elem;              /* List element. */
-
+    struct list open_file_list;         /* list of opened files*/
+    int child_status;                   /* status of the child of the parent process (current) if has one */
+    int fd_last;                        /* fd of the last opened in the current thread */
+    struct thread* parent_thread;       /* parent of the process */
+    uint32_t *pagedir;                  /* Page directory. */
 #ifdef USERPROG
     /* Owned by userprog/process.c. */
-    uint32_t *pagedir;                  /* Page directory. */
+   //  uint32_t *pagedir;                  /* Page directory. */
 #endif
 
     /* Owned by thread.c. */

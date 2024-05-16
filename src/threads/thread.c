@@ -477,6 +477,11 @@ init_thread (struct thread *t, const char *name, int priority)
   t->priority = priority;
   t->magic = THREAD_MAGIC;
 
+  t->parent_thread = NULL; //*ayrataha fi el merge
+  t->child_status = -2;
+  t->fd_last = 2;
+  list_init(&t->open_file_list);
+
   list_init(&t->child_process);
   sema_init(&t->wait_child,0);
   sema_init(&t->parent_child,0);

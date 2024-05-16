@@ -1,6 +1,7 @@
 #ifndef FILESYS_FILESYS_H
 #define FILESYS_FILESYS_H
 
+#include <list.h>
 #include <stdbool.h>
 #include "filesys/off_t.h"
 
@@ -10,6 +11,13 @@
 
 /* Block device that contains the file system. */
 extern struct block *fs_device;
+
+
+struct open_file{
+   int fd;
+   struct file* ptr;
+   struct list_elem elem;
+};
 
 void filesys_init (bool format);
 void filesys_done (void);
