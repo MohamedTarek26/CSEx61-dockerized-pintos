@@ -98,7 +98,7 @@ struct thread
    bool child_creation_succsess;
 
    int child_status;
-   struct child_thread* wait_on;
+   tid_t wait_on;
 
    struct semaphore wait_child;
    struct semaphore parent_child;

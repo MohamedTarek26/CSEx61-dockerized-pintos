@@ -36,7 +36,6 @@ syscall_handler(struct intr_frame *f UNUSED)
     break;
   }
   case SYS_WAIT:
-    process_wait();
     break;
   case SYS_CREATE:
     /* code to handle create system call */
@@ -69,5 +68,33 @@ syscall_handler(struct intr_frame *f UNUSED)
     printf("Unknown system call is requested\n");
     break;
   }
+  thread_exit();
+}
+
+void
+exit_process(int status){
+   
+  struct thread* cur = thread_current(); // child
+  struct thread* parent = cur->parent_thread; // parent
+
+  // struct child_thread* c = has_child(cur->parent_thread, cur->tid);
+  if(parent != NULL){
+  if(parent->wait_on == cur->tid){
+    parent->child_status = status;
+    parent->wait_on = -1;
+    sema_up(&parent->wait_child);
+  }
+  else{
+    struct child_thread * ct = has_child(parent,cur->tid);
+    if(ct != NULL)
+    {
+      list_remove(&ct->child_elem);
+    }
+  }
+  }
+
+  cur->status = status;
+  sema_up(&cur->parent_child);
+  
   thread_exit();
 }

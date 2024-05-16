@@ -477,9 +477,9 @@ init_thread (struct thread *t, const char *name, int priority)
   t->priority = priority;
   t->magic = THREAD_MAGIC;
 
-  list_init(t->child_process);
-  sema_init(t->wait_child,0);
-  sema_init(t->parent_child,0);
+  list_init(&t->child_process);
+  sema_init(&t->wait_child,0);
+  sema_init(&t->parent_child,0);
 
   old_level = intr_disable ();
   list_push_back (&all_list, &t->allelem);
@@ -588,13 +588,15 @@ has_child(struct thread* t, tid_t child_tid){
   struct child_thread* temp_t;
 
   struct list_elem *e = list_begin(&t->child_process);
-
+  enum intr_level old_level = intr_disable();
 	for (; e != list_end(&t->child_process); e = list_next(e)) {
 		temp_t = list_entry(e, struct child_thread, child_elem);
 		if(temp_t->tid == child_tid){
+      intr_set_level(old_level);
       return temp_t;
     } 
   }
+  intr_set_level(old_level);
 
   return NULL;
 }
