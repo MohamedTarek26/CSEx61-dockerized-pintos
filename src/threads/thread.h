@@ -4,7 +4,7 @@
 #include <debug.h>
 #include <list.h>
 #include <stdint.h>
-
+#include <threads/synch.h>
 /* States in a thread's life cycle. */
 enum thread_status
   {
@@ -107,9 +107,7 @@ struct thread
     /* Shared between thread.c and synch.c. */
     struct list_elem elem;              /* List element. */
     struct list open_file_list;         /* list of opened files*/
-    int child_status;                   /* status of the child of the parent process (current) if has one */
     int fd_last;                        /* fd of the last opened in the current thread */
-    struct thread* parent_thread;       /* parent of the process */
     uint32_t *pagedir;                  /* Page directory. */
 #ifdef USERPROG
     /* Owned by userprog/process.c. */
@@ -126,7 +124,7 @@ struct child_thread
       tid_t tid;
       struct thread* tr;
       struct list_elem child_elem; 
-   }
+   };
 
 /* If false (default), use round-robin scheduler.
    If true, use multi-level feedback queue scheduler.
