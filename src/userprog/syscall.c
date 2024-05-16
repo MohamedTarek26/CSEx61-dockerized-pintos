@@ -46,7 +46,7 @@ syscall_handler (struct intr_frame *f)
     f->eax = thread_id;
   }
 
-  else if (*(int*)f->eip == SYS_WAIT){
+  else if (*(int*)f->esp == SYS_WAIT){
     check_void_ptr(f->esp + 4);
     printf("ALOOOOOOOO wait");
     // get filename for process_execute

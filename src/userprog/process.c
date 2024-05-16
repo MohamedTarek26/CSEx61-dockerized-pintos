@@ -49,10 +49,10 @@ tid_t process_execute(const char *file_name)
   arg->c = 0;
   while ((token = strtok_r(rest, " ", &rest)))
   {
-    printf("Delimited token:%s\n", token);
+    // printf("Delimited token:%s\n", token);
     arg->v[arg->c] = token;
     arg->c++;
-    printf("argc:%d\n", arg->c);
+    // printf("argc:%d\n", arg->c);
   }
 
   struct thread * current_thread = thread_current();
@@ -74,13 +74,13 @@ start_process(void *args_)
   struct arguments *arg = args_;
   char *file_name = arg->v[0];
   // strlcpy (file_name, arg->v[0], PGSIZE);
-  // printf("Command is :%s\nArguments count :%d\nArguments:",file_name,arg->c);
-  // // printf("%s",arg->v[0]);
+  // // printf("Command is :%s\nArguments count :%d\nArguments:",file_name,arg->c);
+  // // // printf("%s",arg->v[0]);
   // for (int i = 0; i < arg->c; i++)
   // {
-  //   printf("%s,",arg->v[i]);
+  //   // printf("%s,",arg->v[i]);
   // }
-  // printf("\n");
+  // // printf("\n");
   struct intr_frame if_;
   bool success;
   struct thread* cur = thread_current();
@@ -91,7 +91,7 @@ start_process(void *args_)
   if_.cs = SEL_UCSEG;
   if_.eflags = FLAG_IF | FLAG_MBS;
   success = load(arg, &if_.eip, &if_.esp);
-printf("success:%d\n",success);
+// printf("success:%d\n",success);
   /* If load failed, quit. */
   palloc_free_page (file_name);
   if (!success) 
@@ -163,7 +163,7 @@ int process_wait(tid_t child_tid UNUSED)
 /* Free the current process's resources. */
 void process_exit(void)
 {
-  printf("ALOOOOOOOO exit");
+  // printf("ALOOOOOOOO exit");
   struct thread *cur = thread_current ();
   struct thread* parent = cur->parent_thread;
   
@@ -185,7 +185,7 @@ void process_exit(void)
     pagedir_activate(NULL);
     pagedir_destroy(pd);
   }
-  printf("ALOOOOOOOO khlst exit");
+  // printf("ALOOOOOOOO khlst exit");
 }
 
 /* Sets up the CPU for running user code in the current
@@ -210,7 +210,7 @@ void process_activate(void)
 typedef uint32_t Elf32_Word, Elf32_Addr, Elf32_Off;
 typedef uint16_t Elf32_Half;
 
-/* For use with ELF types in printf(). */
+/* For use with ELF types in // printf(). */
 #define PE32Wx PRIx32 /* Print Elf32_Word in hexadecimal. */
 #define PE32Ax PRIx32 /* Print Elf32_Addr in hexadecimal. */
 #define PE32Ox PRIx32 /* Print Elf32_Off in hexadecimal. */
@@ -296,14 +296,14 @@ bool load(struct arguments *arg, void (**eip)(void), void **esp)
   file = filesys_open(file_name);
   if (file == NULL)
   {
-    printf("load: %s: open failed\n", file_name);
+    // printf("load: %s: open failed\n", file_name);
     goto done;
   }
 
   /* Read and verify executable header. */
   if (file_read(file, &ehdr, sizeof ehdr) != sizeof ehdr || memcmp(ehdr.e_ident, "\177ELF\1\1\1", 7) || ehdr.e_type != 2 || ehdr.e_machine != 3 || ehdr.e_version != 1 || ehdr.e_phentsize != sizeof(struct Elf32_Phdr) || ehdr.e_phnum > 1024)
   {
-    printf("load: %s: error loading executable\n", file_name);
+    // printf("load: %s: error loading executable\n", file_name);
     goto done;
   }
 
@@ -493,13 +493,13 @@ void add_string(void **esp, const char *s)
   size_t len = strlen(s) + 1;
   *esp -= (len * sizeof(char));
   memcpy(*esp, s, len);
-  printf("Pushed string :%s to %p\n", *esp, *esp);
+  // printf("Pushed string :%s to %p\n", *esp, *esp);
 }
 void add_char_pointer_pointer(void **esp, char **pointer)
 {
   *esp -= sizeof(char **);
   *((char ***)*esp) = pointer;
-  printf("Pushing pointer pointer :%p to %p\n", pointer, ((char ***)*esp));
+  // printf("Pushing pointer pointer :%p to %p\n", pointer, ((char ***)*esp));
 }
 
 /* Create a minimal stack by mapping a zeroed page at the top of
@@ -538,22 +538,22 @@ setup_stack(void **esp, const struct arguments *arg)
       }
 
       *esp -= offset;
-      printf("esp moved by offset %d to %p\n", offset, *esp);
-      // printf("Push word align");
+      // printf("esp moved by offset %d to %p\n", offset, *esp);
+      // // printf("Push word align");
       // push null pointer
       *esp -= sizeof(char *);
       *(char *)*esp = 0;
-      printf("Push null pointer to %p\n", (char *)*esp);
+      // printf("Push null pointer to %p\n", (char *)*esp);
 
       // push addresses
       for (int i = arg->c - 1; i >= 0; i--)
       {
         *esp -= sizeof(char *);
         *(char **)*esp = addresses[i];
-          // printf("Pushed pointer :%p to %p\n", (char *)*esp, (char *)*esp);
+          // // printf("Pushed pointer :%p to %p\n", (char *)*esp, (char *)*esp);
 
       }
-      // printf("Push addresses\n");
+      // // printf("Push addresses\n");
       // char* argv_add = *esp;
       // *esp -=  sizeof(char **);
       // *(char *)*esp = argv_add;
@@ -561,16 +561,16 @@ setup_stack(void **esp, const struct arguments *arg)
       // push argc
       *esp -= sizeof(int);
       *((int *)*esp) = arg->c;
-      printf("saving arg c %d to %p\n", *((int *)*esp), (int *)*esp);
+      // printf("saving arg c %d to %p\n", *((int *)*esp), (int *)*esp);
       // hex_dump(*esp, buffer, bytes_read, true);
       // push null pointer
       *esp -= sizeof(char *);
       *(char *)*esp = 0;
-      printf("Push null pointer to %p\n", (char *)*esp);
+      // printf("Push null pointer to %p\n", (char *)*esp);
 
       // char buffer[1024];
       // int bytes_read = 100;
-      hex_dump((uintptr_t)*esp, *esp, PHYS_BASE - *esp, true);
+      // hex_dump((uintptr_t)*esp, *esp, PHYS_BASE - *esp, true);
       // hex_dump(0xbfffffc0, buffer, bytes_read, true);
       // hex_dump(PHYS_BASE-12, buffer, bytes_read, true);
 

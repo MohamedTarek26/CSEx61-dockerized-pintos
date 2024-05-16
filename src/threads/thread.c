@@ -202,7 +202,7 @@ thread_create (const char *name, int priority,
   t->child_creation_succsess = false;
 
   struct thread* cur = thread_current();
-
+  t->parent_thread = cur;
   if(cur->is_perant){
     struct child_thread* c;
     c->tr = &t;
@@ -276,7 +276,7 @@ thread_current (void)
      of stack, so a few big automatic arrays or moderate
      recursion can cause stack overflow. */
   ASSERT (is_thread (t));
-  ASSERT (t->status == THREAD_RUNNING);
+  // ASSERT (t->status == THREAD_RUNNING);
 
   return t;
 }
