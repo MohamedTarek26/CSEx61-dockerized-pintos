@@ -44,10 +44,12 @@ syscall_handler (struct intr_frame *f)
     printf("File to execute is : %s", process_name);
     tid_t thread_id = process_execute(process_name);
   }
+
   else if (*(int*)f->eip == SYS_WAIT){
+    check_void_ptr(f->esp + 4);
     printf("ALOOOOOOOO wait");
     // get filename for process_execute
-    int id = (int *)(f->esp + 1);
+    int id = *((int *)f->esp + 1);
 
     process_wait(id);
     printf("ALOOOOOOOO khlst wait");
