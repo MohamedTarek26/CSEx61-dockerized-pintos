@@ -198,6 +198,19 @@ thread_create (const char *name, int priority,
   sf->eip = switch_entry;
   sf->ebp = 0;
 
+  t-> is_perant = false;
+  t->child_creation_succsess = false;
+
+  struct thread* cur = thread_current();
+
+  if(cur->is_perant){
+    struct child_thread* c;
+    c->tr = &t;
+    c->tid = t->tid;
+
+    list_push_back( &cur->child_process , &c->child_elem);
+  }
+
   /* Add to run queue. */
   thread_unblock (t);
 
@@ -463,10 +476,16 @@ init_thread (struct thread *t, const char *name, int priority)
   t->stack = (uint8_t *) t + PGSIZE;
   t->priority = priority;
   t->magic = THREAD_MAGIC;
-  t->parent_thread = running_thread();
+
+  t->parent_thread = NULL; //*ayrataha fi el merge
   t->child_status = -2;
   t->fd_last = 2;
   list_init(&t->open_file_list);
+
+  list_init(&t->child_process);
+  sema_init(&t->wait_child,0);
+  sema_init(&t->parent_child,0);
+
   old_level = intr_disable ();
   list_push_back (&all_list, &t->allelem);
   intr_set_level (old_level);
@@ -566,6 +585,25 @@ schedule (void)
   if (cur != next)
     prev = switch_threads (cur, next);
   thread_schedule_tail (prev);
+}
+
+struct child_thread * 
+has_child(struct thread* t, tid_t child_tid){
+
+  struct child_thread* temp_t;
+
+  struct list_elem *e = list_begin(&t->child_process);
+  enum intr_level old_level = intr_disable();
+	for (; e != list_end(&t->child_process); e = list_next(e)) {
+		temp_t = list_entry(e, struct child_thread, child_elem);
+		if(temp_t->tid == child_tid){
+      intr_set_level(old_level);
+      return temp_t;
+    } 
+  }
+  intr_set_level(old_level);
+
+  return NULL;
 }
 
 /* Returns a tid to use for a new thread. */

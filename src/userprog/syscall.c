@@ -263,6 +263,7 @@ void check_void_ptr(const void* pt)
   if (pt == NULL || !is_user_vaddr(pt) || pagedir_get_page(thread_current()->pagedir, pt) == NULL) 
   {
     sys_exit(-1);
+
   }
 }
 
@@ -297,4 +298,33 @@ void sys_exit (int status){
       list_remove(&my_file->elem);
       palloc_free_page(my_file);
     }
+
+}
+
+void
+exit_process(int status){
+   
+  struct thread* cur = thread_current(); // child
+  struct thread* parent = cur->parent_thread; // parent
+
+  // struct child_thread* c = has_child(cur->parent_thread, cur->tid);
+  if(parent != NULL){
+  if(parent->wait_on == cur->tid){
+    parent->child_status = status;
+    parent->wait_on = -1;
+    sema_up(&parent->wait_child);
+  }
+  else{
+    struct child_thread * ct = has_child(parent,cur->tid);
+    if(ct != NULL)
+    {
+      list_remove(&ct->child_elem);
+    }
+  }
+  }
+
+  cur->status = status;
+  sema_up(&cur->parent_child);
+  
+  thread_exit();
 }

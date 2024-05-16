@@ -17,6 +17,8 @@
 #include "threads/palloc.h"
 #include "threads/thread.h"
 #include "threads/vaddr.h"
+#include "threads/synch.h"
+
 
 struct arguments
 {
@@ -53,12 +55,15 @@ tid_t process_execute(const char *file_name)
     printf("argc:%d\n", arg->c);
   }
 
+  struct thread * current_thread = thread_current();
   /* Create a new thread to execute FILE_NAME. */
-
+  thread_current()-> is_perant = true;
   tid = thread_create(arg->v[0], PRI_DEFAULT, start_process, arg);
 
   if (tid == TID_ERROR)
-    palloc_free_page(fn_copy);
+    palloc_free_page (fn_copy); 
+  else
+    sema_down(&current_thread->parent_child);
   return tid;
 }
 
@@ -79,6 +84,7 @@ start_process(void *args_)
   // printf("\n");
   struct intr_frame if_;
   bool success;
+  struct thread* cur = thread_current();
 
   /* Initialize interrupt frame and load executable. */
   memset(&if_, 0, sizeof if_);
@@ -88,9 +94,31 @@ start_process(void *args_)
   success = load(arg, &if_.eip, &if_.esp);
 
   /* If load failed, quit. */
-  palloc_free_page(file_name);
-  if (!success)
-    thread_exit();
+<
+  palloc_free_page (file_name);
+  if (!success) 
+  {
+    if(cur->parent_thread != NULL)
+    {
+    sema_up(&(cur->parent_thread)->parent_child);
+    }
+    thread_exit ();
+  }
+  else
+  {
+    // sema up the parent for the parent_child semaphores
+    // and sema down the child for the parent_child semaphores
+    if(thread_current()->parent_thread != NULL)
+    {
+      struct child_thread* ct = malloc(sizeof(struct child_thread));
+      ct->tid = cur->tid;
+      ct->tr = cur;
+      
+      list_push_back(&(cur->parent_thread)->child_process,&ct->child_elem);
+      sema_up(&(cur->parent_thread)->parent_child);
+    }
+    sema_down(&cur->parent_child);
+  }
 
   /* Start the user process by simulating a return from an
      interrupt, implemented by intr_exit (in
@@ -113,9 +141,22 @@ start_process(void *args_)
    does nothing. */
 int process_wait(tid_t child_tid UNUSED)
 {
-  while (true)
+  struct thread* cur =  thread_current();
+  struct child_thread * ct = has_child(cur,child_tid) ;
+
+  if (ct != NULL && ct->tid > cur->tid)
   {
-    thread_yield();
+    cur-> wait_on = ct->tid;
+    list_remove(&ct->child_elem);
+    sema_up(&ct->tr->parent_child);
+    sema_down(&cur->wait_child);
+    
+    // while (true)
+    // {
+    //   thread_yield();
+    // }
+  
+    return cur->child_status;
   }
 
   return -1;
@@ -124,7 +165,10 @@ int process_wait(tid_t child_tid UNUSED)
 /* Free the current process's resources. */
 void process_exit(void)
 {
-  struct thread *cur = thread_current();
+
+  struct thread *cur = thread_current ();
+  struct thread* parent = cur->parent_thread;
+  
   uint32_t *pd;
 
   /* Destroy the current process's page directory and switch back
