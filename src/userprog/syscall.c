@@ -24,38 +24,39 @@ void syscall_init(void)
 static void
 syscall_handler (struct intr_frame *f) 
 {
-  printf ("system call!\n");
+  // printf ("system call! type %d\n",*(int*)f->esp);
   // halting a process
-  if (*(int*)f->eip == SYS_HALT){
+  if (*(int*)f->esp == SYS_HALT){
     shutdown_power_off();
   }
 
   // exiting a process
-  else if (*(int*)f->eip == SYS_EXIT){
+  else if (*(int*)f->esp == SYS_EXIT){
     check_void_ptr(f->esp + 4);
 
     int status = *((int*)f->esp + 1);
     sys_exit(status);
   }
 
-  else if (*(int*)f->eip == SYS_EXEC){
+  else if (*(int*)f->esp == SYS_EXEC){
     // get filename for process_execute
     char *process_name = (char *)(f->esp + 1);
     printf("File to execute is : %s", process_name);
     tid_t thread_id = process_execute(process_name);
+    f->eax = thread_id;
   }
-  else if (*(int*)f->eip == SYS_WAIT){
-    printf("ALOOOOOOOO wait");
+  else if (*(int*)f->esp == SYS_WAIT){
+    // printf("ALOOOOOOOO wait");
     // get filename for process_execute
     int id = (int *)(f->esp + 1);
 
     process_wait(id);
-    printf("ALOOOOOOOO khlst wait");
+    // printf("ALOOOOOOOO khlst wait");
 
   }
 
   // creating a file
-  else if (*(int*)f->eip == SYS_CREATE){
+  else if (*(int*)f->esp == SYS_CREATE){
     check_void_ptr(f->esp + 4);
     check_void_ptr(f->esp + 8);
     char* name = (char*)(*((int*)f->esp + 1));
@@ -69,7 +70,7 @@ syscall_handler (struct intr_frame *f)
     sema_up(&file_lock);
   }
   // removing a file
-  else if (*(int*)f->eip == SYS_REMOVE){
+  else if (*(int*)f->esp == SYS_REMOVE){
     check_void_ptr(f->esp + 4);
 
     char* name = (char*)(*((int*)f->esp + 1));
@@ -83,7 +84,7 @@ syscall_handler (struct intr_frame *f)
   }
 
   // opening a file
-  else if (*(int*)f->eip == SYS_OPEN){
+  else if (*(int*)f->esp == SYS_OPEN){
     check_void_ptr(f->esp + 4);
 
     char* name = (char*)(*((int*)f->esp + 1));
@@ -114,7 +115,7 @@ syscall_handler (struct intr_frame *f)
   }
 
   // getting file size
-  else if (*(int*)f->eip == SYS_FILESIZE){
+  else if (*(int*)f->esp == SYS_FILESIZE){
     check_void_ptr(f->esp + 4);
     struct file* my_file = get_file(*((int*)f->esp + 1))->ptr;
 
@@ -130,7 +131,7 @@ syscall_handler (struct intr_frame *f)
   }
 
   // reading from a file
-  else if (*(int*)f->eip == SYS_READ){
+  else if (*(int*)f->esp == SYS_READ){
     check_void_ptr(f->esp + 4);
     check_void_ptr(f->esp + 8);
     check_void_ptr(f->esp + 12);
@@ -168,7 +169,7 @@ syscall_handler (struct intr_frame *f)
   }
 
   // writing in a file
-  else if (*(int*)f->eip == SYS_WRITE){
+  else if (*(int*)f->esp == SYS_WRITE){
     check_void_ptr(f->esp+4);
     check_void_ptr(f->esp+8);
     check_void_ptr(f->esp+12);
@@ -203,7 +204,7 @@ syscall_handler (struct intr_frame *f)
   }
 
   // seeking the next byte in a file
-  else if (*(int*)f->eip == SYS_SEEK){
+  else if (*(int*)f->esp == SYS_SEEK){
     check_void_ptr(f->esp + 4);
     check_void_ptr(f->esp + 8);
 
@@ -225,7 +226,7 @@ syscall_handler (struct intr_frame *f)
   }
 
   // returning the next byte in a file
-  else if (*(int*)f->eip == SYS_TELL){
+  else if (*(int*)f->esp == SYS_TELL){
     check_void_ptr(f->esp + 4);
     int fd = *((int*)f->esp + 1);
 
@@ -242,7 +243,7 @@ syscall_handler (struct intr_frame *f)
   }
 
   // closing file
-  else if (*(int*)f->eip == SYS_CLOSE){
+  else if (*(int*)f->esp == SYS_CLOSE){
     check_void_ptr(f->esp + 4);
 
     int fd = *((int*) f->esp + 1);
@@ -291,7 +292,7 @@ struct open_file* get_file(int fd){
 
 // exiting process
 void sys_exit (int status){
-    printf("ALOOOOOOOO");
+    // printf("ALOOOOOOOO");
 
     struct thread* parent = thread_current()->parent_thread;
     printf("%s: exit(%d)\n", thread_current()->name, status);
