@@ -451,28 +451,25 @@ void add_string(void **esp, const char *s)
   *esp -= (len * sizeof(char));
   memcpy(*esp, s, len);
 }
-void push_str (void ** esp, const char *s) {
-	size_t len = strlen(s) + 1;
-	*esp -= (len * sizeof(char));
-  // fn_copy = palloc_get_page(0);
-  // if (fn_copy == NULL)
-  //   return TID_ERROR;
-  // strlcpy(*esp, s, PGSIZE);
-	memcpy(*esp, s, len);
-  printf("Pushing string :%s to %p\n",s,*esp);
-
+void push_str(void **esp, const char *s)
+{
+  size_t len = strlen(s) + 1;
+  *esp -= (len * sizeof(char));
+  memcpy(*esp, s, len);
+  printf("Pushing string :%s to %p\n", s, *esp);
 }
 
 void add_pointer(void **esp, void *pointer)
 {
   *esp -= sizeof(void *);
   *((void **)*esp) = pointer;
+  printf("Pushing pointer :%p to %p\n", pointer, (void **)*esp);
 }
 void add_char_pointer_pointer(void **esp, char **pointer)
 {
   *esp -= sizeof(char **);
   *((char ***)*esp) = pointer;
-  
+  printf("Pushing pointer pointer :%p to %p\n", pointer, ((char ***)*esp));
 }
 
 /* Create a minimal stack by mapping a zeroed page at the top of
@@ -500,23 +497,29 @@ setup_stack(void **esp, const struct arguments *arg)
 
         addresses[i] = *esp;
       }
-      char buffer[1024];
-      int bytes_read = 100;
-      hex_dump(0xbfffffc0, buffer, bytes_read, true);
-      printf("Push argv\n");
+      // char buffer[1024];
+      // int bytes_read = 100;
+      // hex_dump(0xbfffffc0, buffer, bytes_read, true);
+      // hex_dump(*esp, buffer, bytes_read, true);
       // word align
       int offset = ((int)*esp) % 4;
+      if (offset < 0)
+      {
+        offset = -offset;
+      }
+
       *esp -= offset;
+      printf("esp moved by offset %d to %p\n", offset, *esp);
       // printf("Push word align");
       // push null pointer
       *esp -= sizeof(char *);
       *(char *)*esp = 0;
-      // printf("Push null pointers");
+      printf("Push null pointer to %p\n", (char *)*esp);
 
       // push addresses
       for (int i = arg->c - 1; i >= 0; i--)
       {
-        *esp -= sizeof(char *);
+        // *esp -= sizeof(char *);
         // *(char *)*esp = addresses[i];
         add_pointer(esp, addresses[i]);
       }
@@ -528,12 +531,16 @@ setup_stack(void **esp, const struct arguments *arg)
       // push argc
       *esp -= sizeof(int);
       *((int *)*esp) = arg->c;
+      printf("saving arg c %d to %p\n", arg->c, (int *)*esp);
+      // hex_dump(*esp, buffer, bytes_read, true);
       // push null pointer
       *esp -= sizeof(char *);
       *(char *)*esp = 0;
-      // char buffer[1024];
-      // int bytes_read = 100;
-      // hex_dump(0xbfffffc0, buffer, bytes_read, true);
+      printf("Push null pointer to %p\n", (char *)*esp);
+
+      char buffer[1024];
+      int bytes_read = 100;
+      hex_dump(0xbfffffc0, buffer, bytes_read, true);
     }
     else
       palloc_free_page(kpage);
