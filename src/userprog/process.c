@@ -57,7 +57,6 @@ tid_t process_execute(const char *file_name)
 
   struct thread * current_thread = thread_current();
   /* Create a new thread to execute FILE_NAME. */
-  thread_current()-> is_perant = true;
   tid = thread_create(arg->v[0], PRI_DEFAULT, start_process, arg);
 
   if (tid == TID_ERROR)
@@ -92,7 +91,7 @@ start_process(void *args_)
   if_.cs = SEL_UCSEG;
   if_.eflags = FLAG_IF | FLAG_MBS;
   success = load(arg, &if_.eip, &if_.esp);
-
+printf("success:%d\n",success);
   /* If load failed, quit. */
   palloc_free_page (file_name);
   if (!success) 
@@ -115,8 +114,8 @@ start_process(void *args_)
       
       list_push_back(&(cur->parent_thread)->child_process,&ct->child_elem);
       sema_up(&(cur->parent_thread)->parent_child);
+      sema_down(&cur->parent_child);
     }
-    sema_down(&cur->parent_child);
   }
 
   /* Start the user process by simulating a return from an
@@ -164,7 +163,7 @@ int process_wait(tid_t child_tid UNUSED)
 /* Free the current process's resources. */
 void process_exit(void)
 {
-
+  printf("ALOOOOOOOO exit");
   struct thread *cur = thread_current ();
   struct thread* parent = cur->parent_thread;
   
@@ -186,6 +185,7 @@ void process_exit(void)
     pagedir_activate(NULL);
     pagedir_destroy(pd);
   }
+  printf("ALOOOOOOOO khlst exit");
 }
 
 /* Sets up the CPU for running user code in the current
